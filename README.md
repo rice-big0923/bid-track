@@ -30,7 +30,7 @@ Everything is in the window that opens when you click the extension icon.
 - **Attached files (optional, your choice).** The checkbox under the invite code (also in **Settings**, and asked
   once after updating) lets Bid Track record the full location of each file you attach on the job page, e.g.
   `C:\Users\you\Documents\Resumes\resume.pdf`, with each capture, so your manager can check the right resume was
-  sent. Only files attached on that page are recorded (their name, size, date and location, never their contents);
+  sent. Only files attached on that page are recorded (their location, never their contents);
   nothing else on your computer is read. With the box unticked nothing about your files is sent. If captures say a
   file location wasn't recorded, turn on **Allow access to file URLs** for Bid Track (`chrome://extensions` →
   Bid Track → Details); Settings shows a reminder while it is off. While a capture runs, Chrome shows its
