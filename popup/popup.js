@@ -1,6 +1,7 @@
 import { getAuth, register, login, logout, me, changePassword, ApiError } from "../lib/api.js";
 import { stepOwnerKey, stepsTaken } from "../lib/storage.js";
 import { resolveApplyFlow } from "../lib/job-platform.js";
+import { getFilePathConsent, setFilePathConsent } from "../lib/attachments.js";
 
 const $ = (id) => document.getElementById(id);
 
@@ -20,6 +21,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("password-form").addEventListener("submit", submitPasswordChange);
   // Chrome only lets its own page change an extension's shortcut.
   $("change-shortcut").addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
+  $("file-paths").addEventListener("change", () => answerFilePaths($("file-paths").checked));
+  $("consent-allow").addEventListener("click", () => answerFilePaths(true));
+  $("consent-decline").addEventListener("click", () => answerFilePaths(false));
+  $("open-extension-settings").addEventListener("click", () =>
+    chrome.tabs.create({ url: `chrome://extensions/?id=${chrome.runtime.id}` })
+  );
   await render();
 });
 
@@ -45,6 +52,7 @@ async function render() {
   const loggedIn = !!auth?.bidder;
   $("auth").classList.toggle("hidden", loggedIn);
   $("account").classList.toggle("hidden", !loggedIn);
+  await showFilePathConsent();
 
   if (loggedIn) {
     showView("main");
@@ -75,6 +83,7 @@ async function submitAuth(event) {
   try {
     if (inviteCode) await register(inviteCode, username, password);
     else await login(username, password);
+    await setFilePathConsent($("file-paths-input").checked);
     event.target.reset();
     $("auth-submit").textContent = "Log in";
     await render();
@@ -187,6 +196,23 @@ async function submitPasswordChange(event) {
     button.disabled = false;
   }
   if (!(await getAuth())) await render();
+}
+
+// The bidder's choice about recording where attached files are stored: the login checkbox, the Settings checkbox, and
+// a one-time question for bidders who logged in before the choice existed.
+async function showFilePathConsent() {
+  const consent = await getFilePathConsent();
+  $("file-paths-input").checked = !!consent?.granted;
+  $("file-paths").checked = !!consent?.granted;
+  $("consent-prompt").classList.toggle("hidden", consent !== null);
+  // Chrome may only reveal file locations to an extension allowed to read file URLs, which only the bidder can turn on.
+  const fileAccess = (await chrome.extension?.isAllowedFileSchemeAccess?.().catch(() => true)) ?? true;
+  $("file-access").classList.toggle("hidden", !consent?.granted || fileAccess);
+}
+
+async function answerFilePaths(granted) {
+  await setFilePathConsent(granted);
+  await showFilePathConsent();
 }
 
 async function saveAutoDownload() {

@@ -219,6 +219,31 @@ input[type="password"]:focus {
   margin: 1px 0 0;
 }
 
+.check.consent {
+  margin-top: 10px;
+  line-height: 1.45;
+}
+
+code {
+  font-size: 11px;
+  word-break: break-all;
+  color: #e2e8f0;
+}
+
+.consent-prompt p {
+  margin: 0;
+}
+
+.consent-actions {
+  display: flex;
+  gap: 8px;
+}
+
+#main .consent-actions .btn {
+  display: inline-block;
+  margin: 10px 0 0;
+}
+
 .hidden {
   display: none !important;
 }

@@ -31,6 +31,7 @@ import {
 import { getArtifactBackend } from "./lib/artifact-storage.js";
 import { resolveApplyFlow } from "./lib/job-platform.js";
 import { confirmUpload, getAuth, getUploadUrl, localIsoWithOffset } from "./lib/api.js";
+import { collectAttachments, getFilePathConsent } from "./lib/attachments.js";
 
 const captureQueue = new Map();
 
@@ -479,6 +480,9 @@ async function capturePage(payload, tabId) {
     const jsonFileName = record.jsonFileName;
     const captureId = `step_${step}`;
 
+    // Before the screenshot: both use the debugger. null when the bidder hasn't allowed it.
+    const attachments = (await getFilePathConsent())?.granted ? await collectAttachments(targetTabId) : null;
+
     let dataUrl;
     let fullPage = true;
     try {
@@ -502,7 +506,8 @@ async function capturePage(payload, tabId) {
       dataUrl,
       format,
       jobUrl: record.url,
-      jobTitle: record.title
+      jobTitle: record.title,
+      attachments
     });
     const b2FileName = b2Upload.ok ? b2Upload.fileName : "";
 
@@ -515,7 +520,8 @@ async function capturePage(payload, tabId) {
       b2FileName,
       b2Error: b2Upload.ok ? "" : b2Upload.error,
       fullPage,
-      capturedAt: capturedAt.toISOString()
+      capturedAt: capturedAt.toISOString(),
+      attachments: attachments || []
     };
 
     record.stepCount = step;
@@ -559,7 +565,8 @@ async function capturePage(payload, tabId) {
       b2FileName,
       b2Upload,
       feedback: describeUpload(
-        step, b2Upload, record.companyName, resolveApplyFlow(record.applyFlow, payload?.applyFlow, record.url)
+        step, b2Upload, record.companyName, resolveApplyFlow(record.applyFlow, payload?.applyFlow, record.url),
+        attachments
       ),
       jsonFileName,
       fullPage,
@@ -575,11 +582,21 @@ const BADGE_OK_MS = 5000;
 
 // The one place upload results are worded; the page notification and the popup both show this text.
 // flow is "multi" (multi-step application: "Step 3 ...") or "single" (one-page form: "Bid ...").
-function describeUpload(step, upload, company, flow = "multi") {
+function describeUpload(step, upload, company, flow = "multi", attachments = null) {
   const what = flow === "single" ? "Bid" : `Step ${step}`;
-  if (upload.ok) return { tone: "ok", text: `${what} uploaded${company ? ` · ${company}` : ""}` };
+  if (upload.ok) {
+    return { tone: "ok", text: `${what} uploaded${company ? ` · ${company}` : ""}${describeAttachments(attachments)}` };
+  }
   const error = upload.error || "";
   return { tone: "error", text: `${what} not uploaded: ${uploadProblem(error)}`, detail: error };
+}
+
+// " · 1 file location recorded", " · 1 of 2 file locations recorded", or "" with no attached files.
+function describeAttachments(attachments) {
+  if (!attachments?.length) return "";
+  const found = attachments.filter((a) => a.path).length;
+  if (found === attachments.length) return ` · ${found} file location${found === 1 ? "" : "s"} recorded`;
+  return ` · ${found} of ${attachments.length} file locations recorded`;
 }
 
 function uploadProblem(error) {
@@ -615,7 +632,7 @@ async function showUploadBadge(ok) {
 }
 
 // Asks the backend for a signed link, PUTs the image to it and confirms it. Never throws: failures are reported in the result.
-async function uploadScreenshot({ jobFolder, step, trigger, capturedAt, dataUrl, format, jobUrl, jobTitle }) {
+async function uploadScreenshot({ jobFolder, step, trigger, capturedAt, dataUrl, format, jobUrl, jobTitle, attachments }) {
   if (!(await getAuth())) return { ok: false, error: "not logged in" };
   try {
     const job = String(jobFolder || "").split("/").filter(Boolean).pop() || "job";
@@ -626,7 +643,8 @@ async function uploadScreenshot({ jobFolder, step, trigger, capturedAt, dataUrl,
       capturedAt: localIsoWithOffset(capturedAt),
       format,
       jobUrl,
-      jobTitle
+      jobTitle,
+      attachments
     });
     const body = await (await fetch(dataUrl)).blob();
     const response = await fetch(url, { method: "PUT", headers, body, signal: AbortSignal.timeout(UPLOAD_TIMEOUT_MS) });

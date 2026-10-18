@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Bid Track",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Track job applications with full-page screenshots. Saves to Downloads and uploads screenshots to your Bid Track account.",
   "permissions": [
     "storage",
@@ -34,6 +34,17 @@
     "default_title": "Bid Track"
   },
   "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content/file-watch.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
     {
       "matches": [
         "<all_urls>"

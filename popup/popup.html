@@ -28,12 +28,26 @@
       <input id="password-input" type="password" required minlength="8" autocomplete="current-password" />
       <label for="invite-input">Invite code <span class="muted">(first time only)</span></label>
       <input id="invite-input" type="text" autocomplete="off" spellcheck="false" />
+      <label class="check consent">
+        <input id="file-paths-input" type="checkbox" />
+        <span>Allow Bid Track to record the full location of files I attach on job pages (for example
+          <code>C:\Users\me\Documents\Resumes\resume.pdf</code>) so my manager can check the right resume was sent.</span>
+      </label>
       <button id="auth-submit" class="btn primary" type="submit">Log in</button>
     </form>
     <p id="auth-error" class="error hidden" role="alert"></p>
   </section>
 
   <section id="main" class="hidden">
+    <div id="consent-prompt" class="notice consent-prompt hidden">
+      <p>Allow Bid Track to record the full location of files you attach on job pages (for example
+        <code>C:\Users\me\Documents\Resumes\resume.pdf</code>) so your manager can check the right resume was sent?
+        You can change this later in Settings.</p>
+      <div class="consent-actions">
+        <button id="consent-allow" class="btn primary" type="button">Allow</button>
+        <button id="consent-decline" class="btn" type="button">Not now</button>
+      </div>
+    </div>
     <button id="upload" class="btn primary" type="button">Capture step 1</button>
     <p id="job" class="job hidden"></p>
     <p id="result" class="result hidden" role="status"></p>
@@ -64,6 +78,18 @@
       <input id="auto-download" type="checkbox" />
       Automatically download the screenshots to local
     </label>
+
+    <h2>Attached files</h2>
+    <label class="check">
+      <input id="file-paths" type="checkbox" />
+      <span>Record the full location of files I attach on job pages, so my manager can check the right resume was
+        sent</span>
+    </label>
+    <div id="file-access" class="notice hidden">
+      Chrome's <strong>Allow access to file URLs</strong> is off for Bid Track. If captures say file locations weren't
+      recorded, turn it on there.
+      <button id="open-extension-settings" class="btn" type="button">Open Bid Track in Chrome settings</button>
+    </div>
   </section>
 
   <script type="module" src="popup.js"></script>
