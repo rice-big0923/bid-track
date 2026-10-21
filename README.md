@@ -19,8 +19,10 @@ Everything is in the window that opens when you click the extension icon.
 
 - **Log in** with your username and password. The first time, also enter the invite code your manager sent you —
   that registers you (username: 3–40 letters, numbers, `.`, `_` or `-`; password: at least 8 characters).
-- **Capture bid** / **Capture step N** saves a full-page screenshot of the job page in the current tab and uploads
-  it; the line under it shows which job it is filed under. On a one-page application form the button says
+- **Capture bid** / **Capture step N** saves a full-page screenshot of the page in the current tab and uploads
+  it; the line under it shows which job it is filed under. Any page can be captured (LinkedIn and Indeed excepted),
+  whether or not it shows a job title or description. A page whose address has no job id (a site's home or login
+  page) is filed with the application already open in that tab on the same site, or else under the site's name. On a one-page application form the button says
   **Capture bid**: click it once before Submit. On a multi-step application (a Next/Continue button or a
   "Step 2 of 5" indicator; Workday, iCIMS, Taleo and similar) it says **Capture step N**: click it on each step,
   before Next and before Submit. Steps are counted per bidder and start again at 1 each day. The result appears

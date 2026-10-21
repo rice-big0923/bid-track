@@ -556,7 +556,10 @@
       return { ok: false, error: "Just saved — wait a moment" };
     }
 
-    await ensureActiveRecord(true);
+    // Pressing Capture files the page under a job whatever is on it: no title, description or job id needed.
+    applyRecordResult(
+      await sendMessage({ type: "INIT_JOB_RECORD", payload: buildJobPayload({ hasApplicationForm: true, capture: true }) })
+    );
     if (!activeRecord?.id) return { ok: false, error: "No job detected on this page" };
 
     capturePending = true;

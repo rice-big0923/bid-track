@@ -180,7 +180,12 @@ async function initJobRecord(payload, tabId) {
   const records = await getRecords();
   const sessionHints = getSessionHints(payload);
   const sessionKey = getJobSessionKey(url, title, sessionHints);
-  const existing = await findExistingRecord(url, title, tabId, records, sessionKey, sessionHints);
+  // payload.capture: the bidder pressed Capture, so the page is filed whatever is on it.
+  const existing =
+    (await findExistingRecord(url, title, tabId, records, sessionKey, sessionHints)) ||
+    (payload.capture && !hasStableJobIdentity(url, title, sessionHints)
+      ? await tabRecordOnSameSite(tabId, url, records)
+      : null);
 
   if (existing) {
     if (jobDescription && jobDescription.length > (existing.jobDescription || "").length) {
@@ -201,7 +206,7 @@ async function initJobRecord(payload, tabId) {
       jobDescription: jobDescription || existing.jobDescription || ""
     };
 
-    if (!isTrackableJobPage(mergedTrackPayload) && !isTrackableJobPage(payload)) {
+    if (!payload.capture && !isTrackableJobPage(mergedTrackPayload) && !isTrackableJobPage(payload)) {
       const keepExisting =
         payload.hasApplicationForm ||
         existing.downloadFolderLocked ||
@@ -224,29 +229,31 @@ async function initJobRecord(payload, tabId) {
     return { ok: true, record: existing, reused: true };
   }
 
-  if (!isTrackableJobPage(payload) && !payload.hasApplicationForm && !looksLikeJobPage(url, title, jobDescription)) {
-    return { ok: false, skipped: true, reason: "Not detected as a job page" };
-  }
-
-  const allowApplyStepRecord =
-    payload.hasApplicationForm && hasStableJobIdentity(url, title, sessionHints);
-
-  if (!isTrackableJobPage(payload) && !allowApplyStepRecord) {
-    const existingId = await getActiveRecordId(tabId);
-    const staleMatches = records.filter(
-      (record) =>
-        (record.jobSessionKey === sessionKey || record.id === existingId) &&
-        (record.stepCount || 0) === 0 &&
-        !(record.captures || []).length
-    );
-    for (const stale of staleMatches) {
-      await purgeInvalidJobRecord(stale, tabId, payload);
+  if (!payload.capture) {
+    if (!isTrackableJobPage(payload) && !payload.hasApplicationForm && !looksLikeJobPage(url, title, jobDescription)) {
+      return { ok: false, skipped: true, reason: "Not detected as a job page" };
     }
-    return { ok: false, skipped: true, reason: getSkipReason(payload) };
-  }
 
-  if (!hasStableJobIdentity(url, title, sessionHints)) {
-    return { ok: false, skipped: true, reason: "No job identity" };
+    const allowApplyStepRecord =
+      payload.hasApplicationForm && hasStableJobIdentity(url, title, sessionHints);
+
+    if (!isTrackableJobPage(payload) && !allowApplyStepRecord) {
+      const existingId = await getActiveRecordId(tabId);
+      const staleMatches = records.filter(
+        (record) =>
+          (record.jobSessionKey === sessionKey || record.id === existingId) &&
+          (record.stepCount || 0) === 0 &&
+          !(record.captures || []).length
+      );
+      for (const stale of staleMatches) {
+        await purgeInvalidJobRecord(stale, tabId, payload);
+      }
+      return { ok: false, skipped: true, reason: getSkipReason(payload) };
+    }
+
+    if (!hasStableJobIdentity(url, title, sessionHints)) {
+      return { ok: false, skipped: true, reason: "No job identity" };
+    }
   }
 
   const record = {
@@ -267,7 +274,9 @@ async function initJobRecord(payload, tabId) {
     downloadFolder: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    submittedAt: null
+    submittedAt: null,
+    // Kept by the page watchers' clean-up of non-job records while its first screenshot is taken.
+    downloadFolderLocked: !!payload.capture
   };
 
   assignDownloadPaths(record, settings);
@@ -383,6 +392,18 @@ function isSameJobUrl(existingUrl, nextUrl) {
   }
 }
 
+// The tab's record when it is on the same site as url: a captured page with no job id of its own (a site's home or
+// login page) is taken as the next step of the application already open in the tab.
+async function tabRecordOnSameSite(tabId, url, records) {
+  const recordId = await getActiveRecordId(tabId);
+  const record = recordId ? records.find((r) => r.id === recordId) : null;
+  try {
+    return record && new URL(record.url).hostname === new URL(url).hostname ? record : null;
+  } catch {
+    return null;
+  }
+}
+
 async function updateJobMeta(payload, tabId) {
   payload = enrichJobPagePayload(payload);
   const recordId = payload?.recordId || (await getActiveRecordId(tabId));
@@ -411,7 +432,7 @@ async function updateJobMeta(payload, tabId) {
   };
 
   if (!isTrackableJobPage(validationPayload) && !payload.hasApplicationForm) {
-    if ((record.captures || []).length > 0 || (record.stepCount || 0) > 0) {
+    if ((record.captures || []).length > 0 || (record.stepCount || 0) > 0 || record.downloadFolderLocked) {
       assignDownloadPaths(record, settings);
       await saveRecord(record);
       notifyRecordUpdated(record);
@@ -458,10 +479,6 @@ async function capturePage(payload, tabId) {
   const records = await getRecords();
   const record = records.find((r) => r.id === recordId);
   if (!record) return { ok: false, error: "Record not found" };
-
-  if (!isTrackableJobPage(payload)) {
-    return { ok: false, error: getSkipReason(payload) || "This job page looks expired or invalid" };
-  }
 
   const targetTabId = tabId || payload?.tabId;
   if (!targetTabId) return { ok: false, error: "No tab for screenshot" };
@@ -1135,6 +1152,7 @@ async function purgeInvalidJobRecord(record, tabId, payload = {}) {
     pageError: payload.pageError || false
   };
 
+  if (record.downloadFolderLocked) return false;
   if (!hasStableJobIdentity(record.url, record.title)) {
     if ((record.captures || []).length > 0 || (record.stepCount || 0) > 0) return false;
     const folder = record.downloadFolder;
@@ -1145,7 +1163,6 @@ async function purgeInvalidJobRecord(record, tabId, payload = {}) {
   }
 
   if (isTrackableJobPage(pagePayload)) return false;
-  if (record.downloadFolderLocked) return false;
   if ((record.captures || []).length > 0 || (record.stepCount || 0) > 0) return false;
 
   const folder = record.downloadFolder;
