@@ -49,7 +49,7 @@ Everything is in the window that opens when you click the extension icon.
 
 ## Server
 
-The extension talks to `https://engineersbackend-production-902c.up.railway.app`. For a test server, open the popup,
+The extension talks to `https://api.181-214-149-92.sslip.io`. For a test server, open the popup,
 right-click → Inspect, and run in the console:
 
 ```js
