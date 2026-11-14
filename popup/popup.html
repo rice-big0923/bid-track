@@ -36,6 +36,25 @@
       <button id="auth-submit" class="btn primary" type="submit">Log in</button>
     </form>
     <p id="auth-error" class="error hidden" role="alert"></p>
+    <button id="show-owner" class="link owner-switch" type="button">I'm the owner — record my own applies</button>
+  </section>
+
+  <section id="owner-auth" class="hidden">
+    <p class="muted">Sign in with your Engineers login and pick the profile this Chrome profile records for. To track
+      another profile, sign in on another Chrome profile.</p>
+    <form id="owner-form" class="form">
+      <label for="owner-user">Name or email</label>
+      <input id="owner-user" type="text" required autocomplete="username" spellcheck="false" />
+      <label for="owner-pass">Password</label>
+      <input id="owner-pass" type="password" required autocomplete="current-password" />
+      <div id="owner-profile-row" class="hidden">
+        <label for="owner-profile">Profile</label>
+        <select id="owner-profile"></select>
+      </div>
+      <button id="owner-submit" class="btn primary" type="submit">Continue</button>
+    </form>
+    <p id="owner-error" class="error hidden" role="alert"></p>
+    <button id="show-bidder" class="link owner-switch" type="button">← I'm a bidder</button>
   </section>
 
   <section id="main" class="hidden">
@@ -58,6 +77,7 @@
 
     <h2>Account</h2>
     <p class="setting-row">Username <span id="settings-username" class="value"></span></p>
+    <p id="owner-password-note" class="muted hidden">Change your password on the Engineers website.</p>
     <form id="password-form" class="form">
       <label for="current-password">Current password</label>
       <input id="current-password" type="password" required autocomplete="current-password" />

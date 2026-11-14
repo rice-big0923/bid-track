@@ -1,4 +1,4 @@
-import { getAuth, register, login, logout, me, changePassword, ApiError } from "../lib/api.js";
+import { getAuth, register, login, logout, me, changePassword, ownerProfiles, ownerLogin, ApiError } from "../lib/api.js";
 import { stepOwnerKey, stepsTaken } from "../lib/storage.js";
 import { resolveApplyFlow } from "../lib/job-platform.js";
 import { getFilePathConsent, setFilePathConsent } from "../lib/attachments.js";
@@ -7,6 +7,11 @@ const $ = (id) => document.getElementById(id);
 
 document.addEventListener("DOMContentLoaded", async () => {
   $("auth-form").addEventListener("submit", submitAuth);
+  $("owner-form").addEventListener("submit", submitOwner);
+  $("show-owner").addEventListener("click", () => showSignIn("owner"));
+  $("show-bidder").addEventListener("click", () => showSignIn("bidder"));
+  // Changing the name or password means asking for the profiles again.
+  for (const id of ["owner-user", "owner-pass"]) $(id).addEventListener("input", resetOwnerProfiles);
   $("invite-input").addEventListener("input", () => {
     $("auth-submit").textContent = $("invite-input").value.trim() ? "Register" : "Log in";
   });
@@ -51,7 +56,11 @@ async function render() {
   }
   const loggedIn = !!auth?.bidder;
   $("auth").classList.toggle("hidden", loggedIn);
+  $("owner-auth").classList.add("hidden");
   $("account").classList.toggle("hidden", !loggedIn);
+  // Owners change their password on the website (it is their platform login).
+  $("password-form").classList.toggle("hidden", auth?.kind === "owner");
+  $("owner-password-note").classList.toggle("hidden", auth?.kind !== "owner");
   await showFilePathConsent();
 
   if (loggedIn) {
@@ -70,6 +79,55 @@ async function render() {
   const { authNotice } = await chrome.storage.local.get("authNotice");
   setText("auth-notice", authNotice || "");
   setText("auth-error", "");
+}
+
+// The bidder sign-in (invite code / username) or the owner's (platform login + one profile).
+function showSignIn(kind) {
+  $("auth").classList.toggle("hidden", kind !== "bidder");
+  $("owner-auth").classList.toggle("hidden", kind !== "owner");
+  setText("owner-error", "");
+  resetOwnerProfiles();
+}
+
+function resetOwnerProfiles() {
+  $("owner-profile-row").classList.add("hidden");
+  $("owner-profile").replaceChildren();
+  $("owner-submit").textContent = "Continue";
+}
+
+// First submit: check the login and list the owner's profiles; second: sign in for the chosen one.
+async function submitOwner(event) {
+  event.preventDefault();
+  const button = $("owner-submit");
+  const username = $("owner-user").value.trim();
+  const password = $("owner-pass").value;
+  const choosing = !$("owner-profile-row").classList.contains("hidden");
+  button.disabled = true;
+  setText("owner-error", "");
+  try {
+    if (!choosing) {
+      const profiles = await ownerProfiles(username, password);
+      if (!profiles.length) {
+        setText("owner-error", "You have no active profiles to record applies for");
+        return;
+      }
+      const { lastOwnerProfile } = await chrome.storage.local.get("lastOwnerProfile");
+      $("owner-profile").replaceChildren(...profiles.map((p) => new Option(p.name, p.id, false, p.id === lastOwnerProfile)));
+      $("owner-profile-row").classList.remove("hidden");
+      button.textContent = "Sign in";
+      return;
+    }
+    const profileId = $("owner-profile").value;
+    await ownerLogin(username, password, profileId);
+    await chrome.storage.local.set({ lastOwnerProfile: profileId });
+    event.target.reset();
+    resetOwnerProfiles();
+    await render();
+  } catch (err) {
+    setText("owner-error", err instanceof ApiError ? err.message : "Something went wrong — try again");
+  } finally {
+    button.disabled = false;
+  }
 }
 
 async function submitAuth(event) {

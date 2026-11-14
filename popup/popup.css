@@ -247,3 +247,13 @@ code {
 .hidden {
   display: none !important;
 }
+
+.owner-switch {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+#owner-profile {
+  width: 100%;
+  padding: 6px;
+}

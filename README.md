@@ -56,3 +56,20 @@ right-click → Inspect, and run in the console:
 chrome.storage.local.set({ serverUrl: "http://localhost:8080" })   // local backend
 chrome.storage.local.remove("serverUrl")                           // back to production
 ```
+
+## Owners: recording your own applies (3.5.0)
+
+Owners can record their own job applies ("self bids") the same way bidders record theirs:
+
+1. Open Bid Track and click **I'm the owner — record my own applies**.
+2. Sign in with your Engineers name or email and password, then pick the **profile** this Chrome profile records for.
+3. Capture as usual: every apply in this Chrome profile is filed under that profile. Self bids are never paid or
+   reviewed.
+4. To track another profile, open another Chrome profile (each has its own Bid Track sign-in) and sign in there with
+   that profile. To switch profile in the same Chrome profile, log out and sign in again.
+
+LinkedIn and Indeed stay excluded, as for bidders. Change your password on the Engineers website.
+
+Manual check before release: owner sign-in with a wrong password (error), with no active profiles (error), choose a
+profile (popup shows "Name · Profile"), capture a job page (the bid appears as a self bid), log out, and the bidder
+sign-in still works in another Chrome profile.
