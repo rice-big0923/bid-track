@@ -73,3 +73,10 @@ LinkedIn and Indeed stay excluded, as for bidders. Change your password on the E
 Manual check before release: owner sign-in with a wrong password (error), with no active profiles (error), choose a
 profile (popup shows "Name · Profile"), capture a job page (the bid appears as a self bid), log out, and the bidder
 sign-in still works in another Chrome profile.
+
+## Update notice (3.5.1)
+
+From 3.5.1 the popup says "Bid Track X is available" with a download link when the server announces a newer version.
+To announce one, set `EXT_LATEST_VERSION` (e.g. `3.5.2`) and `EXT_DOWNLOAD_URL` (where the zip can be downloaded) on
+the server. Updating stays manual: unzip over the Bid Track folder, then Reload on `chrome://extensions`.
+Tests: `node --test tests/version.test.mjs`.

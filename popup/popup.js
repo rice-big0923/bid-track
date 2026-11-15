@@ -1,4 +1,5 @@
-import { getAuth, register, login, logout, me, changePassword, ownerProfiles, ownerLogin, ApiError } from "../lib/api.js";
+import { getAuth, register, login, logout, me, changePassword, ownerProfiles, ownerLogin, latestRelease, ApiError } from "../lib/api.js";
+import { isNewer } from "../lib/version.js";
 import { stepOwnerKey, stepsTaken } from "../lib/storage.js";
 import { resolveApplyFlow } from "../lib/job-platform.js";
 import { getFilePathConsent, setFilePathConsent } from "../lib/attachments.js";
@@ -33,7 +34,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     chrome.tabs.create({ url: `chrome://extensions/?id=${chrome.runtime.id}` })
   );
   await render();
+  void showUpdate();
 });
+
+// "Bid Track X is available" when the server announces a newer version than this one, with the download link.
+async function showUpdate() {
+  const current = chrome.runtime.getManifest().version;
+  const { version, url } = await latestRelease();
+  if (!url || !isNewer(version, current)) return;
+  $("update-version").textContent = version;
+  $("current-version").textContent = current;
+  $("update-link").href = url;
+  $("update").classList.remove("hidden");
+}
 
 // "main" (capture) or "settings", for a logged-in bidder.
 function showView(view) {

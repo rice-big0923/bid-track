@@ -257,3 +257,8 @@ code {
   width: 100%;
   padding: 6px;
 }
+
+.update ol {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
